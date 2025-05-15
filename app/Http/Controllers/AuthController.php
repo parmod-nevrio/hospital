@@ -62,7 +62,7 @@ class AuthController extends Controller
             return $this->error('Invalid credentials', 401);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = User::with(['role.permissions'])->where('email', $request->email)->firstOrFail();
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->success([
@@ -79,8 +79,9 @@ class AuthController extends Controller
 
     public function profile(Request $request)
     {
+        $user = $request->user()->load(['role.permissions']);
         return $this->success([
-            'user' => $request->user()
+            'user' => $user
         ]);
     }
 

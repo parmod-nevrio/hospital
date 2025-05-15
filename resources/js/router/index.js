@@ -13,6 +13,9 @@ import ForgotPassword from '../views/auth/ForgotPassword.vue';
 // Dashboard Pages
 import Dashboard from '../views/dashboard/Dashboard.vue';
 import Profile from '../views/dashboard/Profile.vue';
+import Users from '../views/dashboard/Users.vue';
+import Roles from '../views/dashboard/Roles.vue';
+import Permissions from '../views/dashboard/Permissions.vue';
 
 // Role-specific routes will be added dynamically based on user role
 
@@ -50,12 +53,32 @@ const routes = [
       {
         path: '',
         name: 'dashboard',
-        component: Dashboard
+        component: Dashboard,
+        meta: { title: 'Dashboard' }
       },
       {
         path: 'profile',
         name: 'profile',
-        component: Profile
+        component: Profile,
+        meta: { title: 'Profile' }
+      },
+      {
+        path: 'users',
+        name: 'users',
+        component: Users,
+        meta: { title: 'User Management', requiresPermission: 'users.view' }
+      },
+      {
+        path: 'roles',
+        name: 'roles',
+        component: Roles,
+        meta: { title: 'Role Management', requiresPermission: 'roles.view' }
+      },
+      {
+        path: 'permissions',
+        name: 'permissions',
+        component: Permissions,
+        meta: { title: 'Permission Management', requiresPermission: 'roles.view' }
       }
     ]
   }
@@ -71,10 +94,13 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
-
+  const requiresPermission = to.meta.requiresPermission;
+console.log(">>>>>>",authStore.userPermissions);
   if (requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'login' });
   } else if (requiresGuest && authStore.isAuthenticated) {
+    next({ name: 'dashboard' });
+  } else if (requiresPermission && !authStore.userPermissions.includes(requiresPermission)) {
     next({ name: 'dashboard' });
   } else {
     next();

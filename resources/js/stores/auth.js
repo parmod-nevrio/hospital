@@ -15,7 +15,10 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthenticated: (state) => !!state.token,
     userRole: (state) => state.user?.role,
-    userPermissions: (state) => state.user?.permissions || []
+    userPermissions: (state) => {
+      if (!state.user?.role?.permissions) return [];
+      return state.user.role.permissions.map(p => p.key);
+    }
   },
 
   actions: {

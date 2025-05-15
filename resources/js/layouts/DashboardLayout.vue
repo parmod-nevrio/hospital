@@ -1,8 +1,8 @@
 <template>
   <div class="dashboard-layout">
-    <AppSidebar />
+    <!-- <AppSidebar /> -->
     <div class="main-content">
-      <AppTopbar />
+      <!-- <AppTopbar /> -->
       <div class="content-wrapper">
         <router-view></router-view>
       </div>

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Permission;
 
 class RoleSeeder extends Seeder
 {
@@ -84,13 +85,28 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($roles as $role) {
-            DB::table('roles')->insert([
+            $createdRole = DB::table('roles')->insertGetId([
                 'name' => $role['name'],
                 'slug' => $role['slug'],
                 'description' => $role['description'],
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
+
+            // Assign all permissions to admin and super-admin roles
+            if ($role['slug'] === 'admin' || $role['slug'] === 'super-admin') {
+                $permissions = Permission::all();
+                $rolePermissions = $permissions->map(function ($permission) use ($createdRole) {
+                    return [
+                        'role_id' => $createdRole,
+                        'permission_id' => $permission->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                })->toArray();
+
+                DB::table('role_permission')->insert($rolePermissions);
+            }
         }
     }
 }
