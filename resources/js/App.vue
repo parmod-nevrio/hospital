@@ -17,14 +17,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useAuthStore } from './stores/auth';
+import { computed, onMounted } from 'vue';
+import { useAuthStore } from '@/stores/auth';
 import Toast from 'primevue/toast';
 import AppSidebar from './components/layout/AppSidebar.vue';
 import AppTopbar from './components/layout/AppTopbar.vue';
 
 const authStore = useAuthStore();
 const isAuthenticated = computed(() => authStore.isAuthenticated);
+
+onMounted(async () => {
+  await authStore.initialize();
+});
 </script>
 
 <style>

@@ -42,7 +42,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->success([
-            'user' => $user,
+            'user' => $user->load(['role.permissions']),
             'token' => $token
         ], 'User registered successfully');
     }
@@ -109,7 +109,7 @@ class AuthController extends Controller
         ]));
 
         return $this->success([
-            'user' => $user
+            'user' => $user->load(['role.permissions'])
         ], 'Profile updated successfully');
     }
 

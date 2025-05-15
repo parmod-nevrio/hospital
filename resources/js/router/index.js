@@ -90,12 +90,24 @@ const router = createRouter({
 });
 
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
   const requiresPermission = to.meta.requiresPermission;
-console.log(">>>>>>",authStore.userPermissions);
+
+  // If we have a token but no user data, try to fetch it
+  if (authStore.token && !authStore.user) {
+    try {
+      await authStore.fetchUser();
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+      authStore.logout();
+      next({ name: 'login' });
+      return;
+    }
+  }
+
   if (requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'login' });
   } else if (requiresGuest && authStore.isAuthenticated) {
