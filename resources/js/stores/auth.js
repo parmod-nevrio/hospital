@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -20,12 +23,15 @@ export const useAuthStore = defineStore('auth', {
       try {
         this.loading = true;
         this.error = null;
-        const response = await axios.post('/api/auth/login', credentials);
+        const response = await axios.post('/api/login', credentials);
         this.token = response.data.token;
         this.user = response.data.user;
         localStorage.setItem('token', this.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+
+        //router.push({ name: 'dashboard' });
         return true;
+
       } catch (error) {
         this.error = error.response?.data?.message || 'An error occurred';
         return false;
@@ -38,7 +44,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         this.loading = true;
         this.error = null;
-        const response = await axios.post('/api/auth/register', userData);
+        const response = await axios.post('/api/register', userData);
         this.token = response.data.token;
         this.user = response.data.user;
         localStorage.setItem('token', this.token);
@@ -54,7 +60,7 @@ export const useAuthStore = defineStore('auth', {
 
     async logout() {
       try {
-        await axios.post('/api/auth/logout');
+        await axios.post('/api/logout');
       } catch (error) {
         console.error('Logout error:', error);
       } finally {
@@ -68,7 +74,7 @@ export const useAuthStore = defineStore('auth', {
     async fetchUser() {
       try {
         this.loading = true;
-        const response = await axios.get('/api/auth/user');
+        const response = await axios.get('/api/profile');
         this.user = response.data;
         return true;
       } catch (error) {
@@ -82,7 +88,7 @@ export const useAuthStore = defineStore('auth', {
     async updateProfile(profileData) {
       try {
         this.loading = true;
-        const response = await axios.put('/api/auth/profile', profileData);
+        const response = await axios.put('/api/profile', profileData);
         this.user = response.data;
         return true;
       } catch (error) {
