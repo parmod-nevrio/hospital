@@ -10,67 +10,59 @@
     </div>
 
     <Card>
+      <template #title>
+        <div class="flex justify-content-between align-items-center">
+          <h2 class="m-0">Users</h2>
+          <Button label="New User" icon="pi pi-plus" @click="openUserDialog" />
+        </div>
+      </template>
       <template #content>
         <DataTable
+          v-model:filters="filters"
           :value="users"
-          :paginator="true"
-          :rows="10"
           :loading="loading"
-          :filters="filters"
+          paginator
+          :rows="10"
           filterDisplay="menu"
-          :globalFilterFields="['name', 'email', 'role']"
+          :globalFilterFields="['name', 'email', 'role.name', 'status']"
           responsiveLayout="scroll"
         >
-          <template #header>
-            <div class="table-header">
-              <span class="p-input-icon-left">
-                <i class="pi pi-search" />
-                <InputText
-                  v-model="filters['global'].value"
-                  placeholder="Search users..."
-                />
-              </span>
+          <template #empty>
+            <div class="text-center p-4">
+              <i class="pi pi-users text-4xl text-500 mb-3"></i>
+              <p class="text-500">No users found.</p>
+            </div>
+          </template>
+          <template #loading>
+            <div class="text-center p-4">
+              <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
+              <p class="text-500">Loading users...</p>
             </div>
           </template>
 
-          <Column field="name" header="Name" sortable>
-            <template #body="slotProps">
-              <div class="user-info">
-                <img
-                  :src="slotProps.data.avatar || '/default-avatar.png'"
-                  :alt="slotProps.data.name"
-                  class="user-avatar"
-                />
-                <span>{{ slotProps.data.name }}</span>
+          <Column field="name" header="Name" sortable style="min-width: 14rem">
+            <template #body="{ data }">
+              <div class="flex align-items-center gap-2">
+                <Avatar :label="data.name.charAt(0)" class="bg-primary" />
+                <span>{{ data.name }}</span>
               </div>
             </template>
           </Column>
-          <Column field="email" header="Email" sortable />
-          <Column field="role" header="Role" sortable>
-            <template #body="slotProps">
-              <Tag :value="slotProps.data.role" :severity="getRoleSeverity(slotProps.data.role)" />
+          <Column field="email" header="Email" sortable style="min-width: 14rem" />
+          <Column field="role.name" header="Role" sortable style="min-width: 10rem">
+            <template #body="{ data }">
+              <Tag :value="data.role?.name" :severity="getRoleSeverity(data.role?.name)" />
             </template>
           </Column>
-          <Column field="status" header="Status" sortable>
-            <template #body="slotProps">
-              <Tag
-                :value="slotProps.data.status"
-                :severity="getStatusSeverity(slotProps.data.status)"
-              />
+          <Column field="status" header="Status" sortable style="min-width: 10rem">
+            <template #body="{ data }">
+              <Tag :value="data.status" :severity="getStatusSeverity(data.status)" />
             </template>
           </Column>
-          <Column header="Actions" :exportable="false" style="min-width: 8rem">
-            <template #body="slotProps">
-              <Button
-                icon="pi pi-pencil"
-                class="p-button-rounded p-button-text"
-                @click="editUser(slotProps.data)"
-              />
-              <Button
-                icon="pi pi-trash"
-                class="p-button-rounded p-button-text p-button-danger"
-                @click="confirmDeleteUser(slotProps.data)"
-              />
+          <Column style="min-width: 8rem">
+            <template #body="{ data }">
+              <Button icon="pi pi-pencil" text rounded @click="editUser(data)" />
+              <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDeleteUser(data)" />
             </template>
           </Column>
         </DataTable>
@@ -106,6 +98,18 @@
         />
         <small class="p-error" v-if="submitted && !user.email">Email is required.</small>
       </div>
+      <div class="field" v-if="!user.id">
+        <label for="password">Password</label>
+        <Password
+          id="password"
+          v-model="user.password"
+          :feedback="false"
+          toggleMask
+          required
+          :class="{ 'p-invalid': submitted && !user.password }"
+        />
+        <small class="p-error" v-if="submitted && !user.password">Password is required.</small>
+      </div>
       <div class="field">
         <label for="role">Role</label>
         <Dropdown
@@ -133,17 +137,18 @@
         <small class="p-error" v-if="submitted && !user.status">Status is required.</small>
       </div>
 
+
       <template #footer>
         <Button
           label="Cancel"
           icon="pi pi-times"
-          class="p-button-text"
+          text
           @click="hideDialog"
         />
         <Button
           label="Save"
           icon="pi pi-check"
-          class="p-button-text"
+          text
           @click="saveUser"
         />
       </template>
@@ -164,13 +169,13 @@
         <Button
           label="No"
           icon="pi pi-times"
-          class="p-button-text"
+          text
           @click="deleteUserDialog = false"
         />
         <Button
           label="Yes"
           icon="pi pi-check"
-          class="p-button-text p-button-danger"
+          text
           @click="deleteUser"
         />
       </template>
@@ -181,7 +186,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import { userService } from '@/services/api';
+import { userService, roleService } from '@/services/api';
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -190,9 +195,12 @@ import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Dropdown from 'primevue/dropdown';
 import Tag from 'primevue/tag';
+import Avatar from 'primevue/avatar';
+import Password from 'primevue/password';
 
 const toast = useToast();
 const users = ref([]);
+const roles = ref([]);
 const userDialog = ref(false);
 const deleteUserDialog = ref(false);
 const user = ref({});
@@ -202,13 +210,6 @@ const loading = ref(false);
 const filters = ref({
   global: { value: null }
 });
-
-const roles = [
-  { name: 'Admin', value: 'admin' },
-  { name: 'Doctor', value: 'doctor' },
-  { name: 'Nurse', value: 'nurse' },
-  { name: 'Staff', value: 'staff' }
-];
 
 const statuses = [
   { name: 'Active', value: 'active' },
@@ -239,6 +240,7 @@ const openUserDialog = () => {
   user.value = {
     name: '',
     email: '',
+    password: '',
     role_id: null,
     status: 'active'
   };
@@ -264,17 +266,22 @@ const confirmDeleteUser = (data) => {
 const saveUser = async () => {
   submitted.value = true;
 
-  if (user.value.name && user.value.email && user.value.role_id && user.value.status) {
+  if (user.value.name && user.value.email && user.value.role_id && user.value.status && (!user.value.id || user.value.password)) {
     try {
+      const userData = { ...user.value };
       if (user.value.id) {
+        // Remove password if not changed
+        if (!userData.password) {
+          delete userData.password;
+        }
         // Update existing user
-        const response = await userService.update(user.value.id, user.value);
+        const response = await userService.update(user.value.id, userData);
         const index = users.value.findIndex(u => u.id === user.value.id);
         users.value[index] = response.data;
         toast.add({ severity: 'success', summary: 'Successful', detail: 'User Updated', life: 3000 });
       } else {
         // Create new user
-        const response = await userService.create(user.value);
+        const response = await userService.create(userData);
         users.value.push(response.data);
         toast.add({ severity: 'success', summary: 'Successful', detail: 'User Created', life: 3000 });
       }
@@ -302,10 +309,18 @@ const deleteUser = async () => {
 onMounted(async () => {
   try {
     loading.value = true;
-    const response = await userService.getAll();
-    users.value = response.data;
+    // Fetch users
+    const usersResponse = await userService.getAll();
+    users.value = usersResponse.data;
+
+    // Fetch roles
+    const rolesResponse = await roleService.getAll();
+    roles.value = rolesResponse.data.map(role => ({
+      name: role.name,
+      value: role.id
+    }));
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Failed to load users', life: 3000 });
+    toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Failed to load data', life: 3000 });
   } finally {
     loading.value = false;
   }

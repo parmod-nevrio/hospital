@@ -17,6 +17,7 @@ api.interceptors.request.use(config => {
     return config;
 });
 
+// User service
 export const userService = {
     getAll: () => api.get('/users'),
     getById: (id) => api.get(`/users/${id}`),
@@ -25,6 +26,7 @@ export const userService = {
     delete: (id) => api.delete(`/users/${id}`)
 };
 
+// Role service
 export const roleService = {
     getAll: () => api.get('/roles'),
     getById: (id) => api.get(`/roles/${id}`),
