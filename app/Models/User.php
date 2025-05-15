@@ -6,11 +6,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +22,19 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'phone',
+        'address',
+        'date_of_birth',
+        'gender',
+        'role_id',
+        'department_id',
+        'employee_id',
+        'is_active',
+        'specialization',
+        'qualification',
+        'blood_group',
+        'emergency_contact',
+        'meta_data'
     ];
 
     /**
@@ -43,6 +57,69 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'date_of_birth' => 'date',
+            'meta_data' => 'json',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class, 'patient_id');
+    }
+
+    public function doctorAppointments()
+    {
+        return $this->hasMany(Appointment::class, 'doctor_id');
+    }
+
+    public function medicalRecords()
+    {
+        return $this->hasMany(MedicalRecord::class, 'patient_id');
+    }
+
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class, 'patient_id');
+    }
+
+    public function labTests()
+    {
+        return $this->hasMany(LabTest::class, 'patient_id');
+    }
+
+    public function billings()
+    {
+        return $this->hasMany(Billing::class, 'patient_id');
+    }
+
+    public function hasRole($role)
+    {
+        return $this->role->slug === $role;
+    }
+
+    public function isAdmin()
+    {
+        return $this->hasRole('admin') || $this->hasRole('super-admin');
+    }
+
+    public function isDoctor()
+    {
+        return $this->hasRole('doctor');
+    }
+
+    public function isPatient()
+    {
+        return $this->hasRole('patient');
     }
 }
