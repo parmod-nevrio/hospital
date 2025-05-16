@@ -22,11 +22,14 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
+        'status',
+        'email_verified_at',
         'phone',
         'address',
+        'profile_picture',
         'date_of_birth',
         'gender',
-        'role_id',
         'department_id',
         'employee_id',
         'is_active',
@@ -65,12 +68,17 @@ class User extends Authenticatable
 
     public function role()
     {
-        return $this->belongsTo(Role::class)->with('permissions');
+        return $this->belongsTo(Role::class);
     }
 
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function doctorProfile()
+    {
+        return $this->hasOne(DoctorProfile::class);
     }
 
     public function appointments()
@@ -101,6 +109,11 @@ class User extends Authenticatable
     public function billings()
     {
         return $this->hasMany(Billing::class, 'patient_id');
+    }
+
+    public function medicalHistory()
+    {
+        return $this->hasMany(MedicalHistory::class, 'patient_id');
     }
 
     public function hasRole($role)

@@ -6,26 +6,79 @@ use App\Models\User;
 use App\Models\Appointment;
 use App\Models\MedicalRecord;
 use App\Models\Prescription;
+use App\Models\DoctorProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class DoctorController extends Controller
 {
+    public function index()
+    {
+        $doctors = User::whereHas('role', function ($query) {
+            $query->where('slug', 'doctor');
+        })->with('doctorProfile')->get();
+
+        return response()->json($doctors);
+    }
+
+    public function show($id)
+    {
+        $doctor = User::whereHas('role', function ($query) {
+            $query->where('slug', 'doctor');
+        })->with('doctorProfile')->findOrFail($id);
+
+        return response()->json($doctor);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'specialization' => 'required|string',
+            'qualification' => 'required|string',
+            'experience' => 'required|string',
+            'consultation_fee' => 'required|numeric|min:0',
+            'availability' => 'required|array',
+            'about' => 'nullable|string',
+            'license_number' => 'required|string|unique:doctor_profiles,license_number,' . $request->user()->id . ',user_id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $profile = DoctorProfile::updateOrCreate(
+            ['user_id' => $request->user()->id],
+            $request->all()
+        );
+
+        return response()->json($profile);
+    }
+
+    public function updateAvailability(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'availability' => 'required|array',
+            'is_available' => 'required|boolean'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $profile = DoctorProfile::where('user_id', $request->user()->id)->firstOrFail();
+        $profile->update($request->all());
+
+        return response()->json($profile);
+    }
+
     public function getAppointments(Request $request)
     {
-        $query = Appointment::where('doctor_id', $request->user()->id);
+        $appointments = $request->user()->appointments()
+            ->with(['patient', 'prescription'])
+            ->orderBy('appointment_date', 'desc')
+            ->get();
 
-        if ($request->date) {
-            $query->whereDate('appointment_datetime', $request->date);
-        }
-
-        if ($request->status) {
-            $query->where('status', $request->status);
-        }
-
-        $appointments = $query->with(['patient'])->orderBy('appointment_datetime')->paginate(10);
-
-        return $this->success(['appointments' => $appointments]);
+        return response()->json($appointments);
     }
 
     public function updateAppointment(Request $request, Appointment $appointment)

@@ -10,28 +10,19 @@ class Prescription extends Model
     use HasFactory;
 
     protected $fillable = [
-        'medical_record_id',
         'patient_id',
         'doctor_id',
-        'prescription_date',
+        'appointment_id',
+        'diagnosis',
         'medications',
         'instructions',
         'notes',
-        'status',
-        'pharmacist_id',
-        'dispensed_at'
+        'next_visit'
     ];
 
     protected $casts = [
-        'prescription_date' => 'date',
-        'medications' => 'json',
-        'dispensed_at' => 'datetime'
+        'next_visit' => 'date'
     ];
-
-    public function medicalRecord()
-    {
-        return $this->belongsTo(MedicalRecord::class);
-    }
 
     public function patient()
     {
@@ -43,8 +34,8 @@ class Prescription extends Model
         return $this->belongsTo(User::class, 'doctor_id');
     }
 
-    public function pharmacist()
+    public function appointment()
     {
-        return $this->belongsTo(User::class, 'pharmacist_id');
+        return $this->belongsTo(Appointment::class);
     }
 }

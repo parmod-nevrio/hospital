@@ -1,178 +1,122 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <h2 class="text-center mb-4">Hospital Management System</h2>
-      <form @submit.prevent="handleLogin">
-        <div class="mb-3">
-          <label for="email" class="form-label">Email</label>
-          <InputText
-            id="email"
-            v-model="email"
-            type="email"
-            class="w-full"
-            :class="{ 'p-invalid': v$.email.$error }"
-            aria-describedby="email-help"
-          />
-          <small v-if="v$.email.$error" class="p-error">
-            {{ v$.email.$errors[0].$message }}
-          </small>
-        </div>
-
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
-          <Password
-            id="password"
-            v-model="password"
-            :feedback="false"
-            toggleMask
-            class="w-full"
-            :class="{ 'p-invalid': v$.password.$error }"
-          />
-          <small v-if="v$.password.$error" class="p-error">
-            {{ v$.password.$errors[0].$message }}
-          </small>
-        </div>
-
-        <div class="flex justify-content-between align-items-center mb-4">
-          <div class="flex align-items-center">
-            <Checkbox
-              v-model="rememberMe"
-              :binary="true"
-              inputId="rememberMe"
+  <div class="login-page">
+    <Card class="login-card">
+      <template #title>
+        <h2 class="text-center">Login</h2>
+      </template>
+      <template #content>
+        <form @submit.prevent="handleSubmit" class="p-fluid">
+          <div class="field">
+            <label for="email">Email</label>
+            <InputText
+              id="email"
+              v-model="form.email"
+              type="email"
+              :class="{ 'p-invalid': submitted && !form.email }"
+              required
             />
-            <label for="rememberMe" class="ml-2">Remember me</label>
+            <small class="p-error" v-if="submitted && !form.email">Email is required.</small>
           </div>
-          <router-link to="/forgot-password" class="text-primary">
-            Forgot Password?
-          </router-link>
-        </div>
 
-        <Button
-          type="submit"
-          label="Login"
-          class="w-full"
-          :loading="authStore.loading"
-        />
+          <div class="field">
+            <label for="password">Password</label>
+            <Password
+              id="password"
+              v-model="form.password"
+              :feedback="false"
+              toggleMask
+              :class="{ 'p-invalid': submitted && !form.password }"
+              required
+            />
+            <small class="p-error" v-if="submitted && !form.password">Password is required.</small>
+          </div>
 
-        <div class="text-center mt-4">
+          <div class="field-checkbox">
+            <Checkbox id="remember" v-model="form.remember" :binary="true" />
+            <label for="remember">Remember me</label>
+          </div>
+
+          <Button type="submit" label="Login" class="mt-2" />
+        </form>
+
+        <div class="mt-4 text-center">
           <p>
             Don't have an account?
-            <router-link to="/register" class="text-primary">Register</router-link>
+            <router-link to="/register">Register here</router-link>
           </p>
         </div>
-      </form>
-    </div>
+      </template>
+    </Card>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import { useVuelidate } from '@vuelidate/core';
-import { required, email as emailValidator } from '@vuelidate/validators';
 import { useToast } from 'primevue/usetoast';
-
-// Components
-import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
-import Checkbox from 'primevue/checkbox';
-import Button from 'primevue/button';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
-const authStore = useAuthStore();
 const toast = useToast();
+const authStore = useAuthStore();
 
-const email = ref('');
-const password = ref('');
-const rememberMe = ref(false);
+const form = reactive({
+  email: '',
+  password: '',
+  remember: false
+});
 
-const rules = {
-  email: { required, email: emailValidator },
-  password: { required }
-};
+const submitted = ref(false);
 
-const v$ = useVuelidate(rules, { email, password });
+const handleSubmit = async () => {
+  submitted.value = true;
 
-const handleLogin = async () => {
-  const isValid = await v$.value.$validate();
-  if (!isValid) return;
-
-  const success = await authStore.login({
-    email: email.value,
-    password: password.value,
-    remember: rememberMe.value
-  });
-
-  if (success) {
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Login successful',
-      life: 3000
-    });
-    router.push({ name: 'dashboard' });
-  } else {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: authStore.error || 'Login failed',
-      life: 3000
-    });
+  if (form.email && form.password) {
+    try {
+      await authStore.login(form);
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Login successful',
+        life: 3000
+      });
+      router.push('/dashboard');
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: error.response?.data?.message || 'Login failed',
+        life: 3000
+      });
+    }
   }
 };
 </script>
 
 <style scoped>
-.login-container {
-  min-height: 100vh;
+.login-page {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  min-height: 100vh;
   background-color: #f8f9fa;
 }
 
 .login-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 400px;
+  margin: 2rem;
 }
 
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.mb-3 {
-  margin-bottom: 1rem;
-}
-
-.mb-4 {
+.field {
   margin-bottom: 1.5rem;
 }
 
-.mt-4 {
-  margin-top: 1.5rem;
+.field-checkbox {
+  margin-bottom: 1.5rem;
 }
 
-.w-full {
+:deep(.p-password input) {
   width: 100%;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.text-primary {
-  color: var(--primary-color);
-  text-decoration: none;
-}
-
-.text-primary:hover {
-  text-decoration: underline;
 }
 </style>

@@ -12,17 +12,19 @@ class Appointment extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
-        'department_id',
-        'appointment_datetime',
-        'appointment_type',
+        'appointment_date',
         'status',
-        'reason',
+        'symptoms',
         'notes',
-        'created_by'
+        'appointment_type',
+        'payment_status',
+        'amount',
+        'payment_id'
     ];
 
     protected $casts = [
-        'appointment_datetime' => 'datetime'
+        'appointment_date' => 'datetime',
+        'amount' => 'decimal:2'
     ];
 
     public function patient()
@@ -35,18 +37,8 @@ class Appointment extends Model
         return $this->belongsTo(User::class, 'doctor_id');
     }
 
-    public function department()
+    public function prescription()
     {
-        return $this->belongsTo(Department::class);
-    }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function medicalRecord()
-    {
-        return $this->hasOne(MedicalRecord::class);
+        return $this->hasOne(Prescription::class);
     }
 }
