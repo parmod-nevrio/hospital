@@ -19,9 +19,13 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'dispensed', 'completed']);
             $table->unsignedBigInteger('pharmacist_id')->nullable();
+
+            $table->foreignId('appointment_id')->nullable();
+            $table->text('diagnosis')->nullable();
+            $table->date('next_visit')->nullable();
+
             $table->timestamp('dispensed_at')->nullable();
             $table->timestamps();
-
             $table->foreign('medical_record_id')->references('id')->on('medical_records');
             $table->foreign('patient_id')->references('id')->on('users');
             $table->foreign('doctor_id')->references('id')->on('users');

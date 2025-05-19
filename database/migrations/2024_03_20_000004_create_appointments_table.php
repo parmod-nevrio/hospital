@@ -12,7 +12,11 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('patient_id');
             $table->unsignedBigInteger('doctor_id');
-            $table->unsignedBigInteger('department_id');
+            $table->unsignedBigInteger('department_id')->nullable();
+            $table->string('payment_status')->default('pending');
+            $table->decimal('amount', 10, 2)->nullable();
+            $table->string('payment_id')->nullable();
+
             $table->dateTime('appointment_datetime');
             $table->string('appointment_type');
             $table->enum('status', ['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show']);
@@ -23,7 +27,7 @@ return new class extends Migration
 
             $table->foreign('patient_id')->references('id')->on('users');
             $table->foreign('doctor_id')->references('id')->on('users');
-            $table->foreign('department_id')->references('id')->on('departments');
+            //$table->foreign('department_id')->references('id')->on('departments');
             $table->foreign('created_by')->references('id')->on('users');
         });
     }

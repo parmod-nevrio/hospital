@@ -19,7 +19,7 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) => !!state.token,
-    currentUser: (state) => state.user,
+    getUser: (state) => state.user,
     userRole: (state) => state.user?.role,
     userPermissions: (state) => {
       console.log('User data in getter:', state.user);
@@ -42,20 +42,19 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async login(credentials) {
+      this.loading = true;
+      this.error = null;
+
       try {
-        this.loading = true;
-        this.error = null;
-        const response = await axios.post('/api/login', credentials);
-        console.log('Login response:', response.data);
+        const response = await axios.post('/login', credentials);
         this.token = response.data.token;
         this.user = response.data.user;
-        localStorage.setItem('token', this.token);
+        localStorage.setItem('token', response.data.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
         return response;
       } catch (error) {
-        console.error('Login error:', error.response?.data);
-        this.error = error.response?.data?.message || 'An error occurred';
-        return false;
+        this.error = error.response?.data?.message || 'An error occurred during login';
+        throw error;
       } finally {
         this.loading = false;
       }
@@ -83,39 +82,23 @@ export const useAuthStore = defineStore('auth', {
 
     async logout() {
       try {
-        if (this.token) {
-          await axios.post('/api/logout');
-        }
-      } catch (error) {
-        console.error('Logout error:', error);
-      } finally {
+        await axios.post('/logout');
         this.token = null;
         this.user = null;
         localStorage.removeItem('token');
         delete axios.defaults.headers.common['Authorization'];
+      } catch (error) {
+        console.error('Logout error:', error);
       }
     },
 
     async fetchUser() {
       try {
-        this.loading = true;
-        console.log('Fetching user profile...');
-        const response = await axios.get('/api/me');
-        console.log('Profile response:', response.data);
-        if (response.data && response.data.user) {
-          this.user = response.data.user;
-          console.log('User data set:', this.user);
-        } else {
-          console.error('Invalid profile response structure:', response.data);
-          throw new Error('Invalid profile response structure');
-        }
-        return response;
+        const response = await axios.get('/user');
+        this.user = response.data;
       } catch (error) {
-        console.error('Fetch user error:', error.response?.data);
-        this.error = error.response?.data?.message || 'An error occurred';
-        return false;
-      } finally {
-        this.loading = false;
+        this.error = error.response?.data?.message;
+        throw error;
       }
     },
 
@@ -138,6 +121,19 @@ export const useAuthStore = defineStore('auth', {
       } finally {
         this.loading = false;
       }
+    },
+
+    setUser(user) {
+      this.user = user;
+    },
+
+    setToken(token) {
+      this.token = token;
+      localStorage.setItem('token', token);
+    },
+
+    clearError() {
+      this.error = null;
     }
   }
 });

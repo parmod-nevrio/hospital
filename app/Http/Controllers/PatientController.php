@@ -10,9 +10,166 @@ use App\Models\LabTest;
 use App\Models\Billing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class PatientController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'patient']);
+    }
+
+    public function dashboard()
+    {
+        $patient = Auth::user();
+
+        $data = [
+            'upcomingAppointments' => Appointment::where('patient_id', $patient->id)
+                ->where('date', '>=', now())
+                ->count(),
+            'recentPrescriptions' => Prescription::where('patient_id', $patient->id)
+                ->where('created_at', '>=', now()->subDays(30))
+                ->count(),
+            'medicalRecords' => MedicalRecord::where('patient_id', $patient->id)->count(),
+            'pendingBills' => Billing::where('patient_id', $patient->id)
+                ->where('status', 'pending')
+                ->count(),
+            'recentAppointments' => Appointment::where('patient_id', $patient->id)
+                ->with(['doctor', 'department'])
+                ->latest()
+                ->take(5)
+                ->get(),
+            'recentMedicalRecords' => MedicalRecord::where('patient_id', $patient->id)
+                ->with('doctor')
+                ->latest()
+                ->take(5)
+                ->get(),
+        ];
+
+        return view('patient.dashboard', $data);
+    }
+
+    public function appointments()
+    {
+        $appointments = Appointment::where('patient_id', Auth::id())
+            ->with(['doctor', 'department'])
+            ->latest()
+            ->paginate(10);
+
+        return view('patient.appointments.index', compact('appointments'));
+    }
+
+    public function showAppointment(Appointment $appointment)
+    {
+        $this->authorize('view', $appointment);
+        return view('patient.appointments.show', compact('appointment'));
+    }
+
+    public function createAppointment()
+    {
+        $departments = Department::all();
+        $doctors = Doctor::all();
+        return view('patient.appointments.create', compact('departments', 'doctors'));
+    }
+
+    public function storeAppointment(Request $request)
+    {
+        $validated = $request->validate([
+            'doctor_id' => 'required|exists:doctors,id',
+            'department_id' => 'required|exists:departments,id',
+            'date' => 'required|date|after:today',
+            'time' => 'required',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $appointment = Appointment::create([
+            'patient_id' => Auth::id(),
+            'doctor_id' => $validated['doctor_id'],
+            'department_id' => $validated['department_id'],
+            'date' => $validated['date'],
+            'time' => $validated['time'],
+            'reason' => $validated['reason'],
+            'status' => 'pending',
+        ]);
+
+        return redirect()
+            ->route('patient.appointments.show', $appointment)
+            ->with('success', 'Appointment booked successfully!');
+    }
+
+    public function medicalRecords()
+    {
+        $records = MedicalRecord::where('patient_id', Auth::id())
+            ->with('doctor')
+            ->latest()
+            ->paginate(10);
+
+        return view('patient.medical-records.index', compact('records'));
+    }
+
+    public function showMedicalRecord(MedicalRecord $record)
+    {
+        $this->authorize('view', $record);
+        return view('patient.medical-records.show', compact('record'));
+    }
+
+    public function prescriptions()
+    {
+        $prescriptions = Prescription::where('patient_id', Auth::id())
+            ->with('doctor')
+            ->latest()
+            ->paginate(10);
+
+        return view('patient.prescriptions.index', compact('prescriptions'));
+    }
+
+    public function showPrescription(Prescription $prescription)
+    {
+        $this->authorize('view', $prescription);
+        return view('patient.prescriptions.show', compact('prescription'));
+    }
+
+    public function billing()
+    {
+        $bills = Billing::where('patient_id', Auth::id())
+            ->latest()
+            ->paginate(10);
+
+        return view('patient.billing.index', compact('bills'));
+    }
+
+    public function showBill(Billing $bill)
+    {
+        $this->authorize('view', $bill);
+        return view('patient.billing.show', compact('bill'));
+    }
+
+    public function profile()
+    {
+        return view('patient.profile', ['user' => Auth::user()]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'phone' => 'required|string|max:20',
+            'address' => 'required|string|max:500',
+            'date_of_birth' => 'required|date',
+            'gender' => 'required|in:male,female,other',
+            'blood_group' => 'required|string|max:5',
+        ]);
+
+        $user->update($validated);
+
+        return redirect()
+            ->route('patient.profile')
+            ->with('success', 'Profile updated successfully!');
+    }
+
     public function bookAppointment(Request $request)
     {
         $validator = Validator::make($request->all(), [
